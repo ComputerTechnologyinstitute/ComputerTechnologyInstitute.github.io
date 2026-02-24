@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Certificate Verification System</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #2563eb;
+    --primary-light: #eff6ff;
+    --primary-dark: #1d4ed8;
+    --success: #16a34a;
+    --success-light: #f0fdf4;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+    --shadow-lg: 0 4px 6px rgba(0,0,0,0.05), 0 10px 40px rgba(0,0,0,0.1);
+    --radius: 12px;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--gray-50);
+    color: var(--gray-900);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── VIEWS ── */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── NAV ── */
+  nav {
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .nav-brand {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.3px;
+  }
+  .nav-brand span { color: var(--gray-700); font-weight: 400; }
+  .nav-actions { display: flex; gap: 8px; align-items: center; }
+  .nav-link {
+    background: none; border: none; cursor: pointer;
+    padding: 6px 14px; border-radius: 8px;
+    font-size: 0.875rem; color: var(--gray-700);
+    font-weight: 500; transition: background 0.15s;
+  }
+  .nav-link:hover { background: var(--gray-100); }
+  .nav-link.danger { color: var(--danger); }
+  .nav-link.danger:hover { background: var(--danger-light); }
+
+  /* ── CONTAINER ── */
+  .container { max-width: 680px; margin: 0 auto; padding: 40px 20px; }
+  .container.wide { max-width: 960px; }
+
+  /* ── CARD ── */
+  .card {
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 32px;
+  }
+  .card + .card { margin-top: 20px; }
+
+  /* ── PAGE HEADER ── */
+  .page-header { text-align: center; margin-bottom: 32px; }
+  .page-header .icon {
+    width: 56px; height: 56px; border-radius: 14px;
+    background: var(--primary-light);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; margin-bottom: 12px;
+  }
+  .page-header h1 { font-size: 1.6rem; font-weight: 700; color: var(--gray-900); }
+  .page-header p { color: var(--gray-500); margin-top: 4px; font-size: 0.9rem; }
+
+  /* ── FORM ── */
+  .form-group { margin-bottom: 18px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--gray-700); margin-bottom: 6px; letter-spacing: 0.3px; text-transform: uppercase; }
+  input[type="text"], input[type="password"], input[type="date"], input[type="file"], select {
+    width: 100%; padding: 10px 14px; border: 1.5px solid var(--gray-200);
+    border-radius: 8px; font-size: 0.9rem; color: var(--gray-900);
+    background: #fff; outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+  }
+  input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+  input[type="file"] { padding: 8px 14px; color: var(--gray-500); cursor: pointer; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 20px; border-radius: 8px; font-size: 0.9rem;
+    font-weight: 600; border: none; cursor: pointer; transition: all 0.15s;
+    font-family: inherit; text-decoration: none;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { background: #15803d; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22,163,74,0.3); }
+  .btn-outline { background: #fff; color: var(--gray-700); border: 1.5px solid var(--gray-200); }
+  .btn-outline:hover { background: var(--gray-50); border-color: var(--gray-400); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { background: #b91c1c; }
+  .btn-full { width: 100%; }
+  .btn-sm { padding: 7px 14px; font-size: 0.82rem; }
+
+  /* ── SEARCH BOX ── */
+  .search-wrap {
+    display: flex; gap: 10px;
+  }
+  .search-wrap input { flex: 1; }
+  .search-wrap .btn { white-space: nowrap; }
+
+  /* ── RESULT CARD ── */
+  .result-card {
+    border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius); padding: 24px; margin-top: 24px;
+    background: #fff;
+  }
+  .result-card.found { border-color: #bbf7d0; background: var(--success-light); }
+  .result-card.not-found { border-color: #fecaca; background: var(--danger-light); text-align: center; padding: 32px; }
+  .result-card.not-found p { color: var(--danger); font-weight: 600; font-size: 1rem; }
+  .result-card.not-found small { color: var(--gray-500); font-size: 0.82rem; }
+
+  .result-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .result-name { font-size: 1.2rem; font-weight: 700; color: var(--gray-900); }
+  .result-id { font-size: 0.8rem; color: var(--gray-500); font-weight: 500; }
+  .badge {
+    display: inline-block; padding: 4px 10px; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.3px;
+    background: #dcfce7; color: var(--success);
+  }
+
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; margin-bottom: 20px; }
+  .detail-item label { font-size: 0.72rem; color: var(--gray-400); margin-bottom: 2px; text-transform: uppercase; font-weight: 600; }
+  .detail-item p { font-size: 0.9rem; color: var(--gray-900); font-weight: 500; }
+
+  /* ── ADMIN TABLE ── */
+  .table-wrap { overflow-x: auto; margin-top: 20px; border-radius: 8px; border: 1px solid var(--gray-200); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { background: var(--gray-50); padding: 10px 14px; text-align: left; font-weight: 700; color: var(--gray-700); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 1px solid var(--gray-200); }
+  td { padding: 10px 14px; color: var(--gray-700); border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--gray-50); }
+
+  /* ── ALERT ── */
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; margin-bottom: 18px; }
+  .alert-danger { background: var(--danger-light); color: var(--danger); border: 1px solid #fecaca; }
+  .alert-success { background: var(--success-light); color: var(--success); border: 1px solid #bbf7d0; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--gray-100); padding: 4px; border-radius: 10px; }
+  .tab {
+    flex: 1; padding: 8px; border: none; background: none; cursor: pointer;
+    border-radius: 7px; font-size: 0.875rem; font-weight: 600; color: var(--gray-500);
+    transition: all 0.15s; font-family: inherit;
+  }
+  .tab.active { background: #fff; color: var(--primary); box-shadow: var(--shadow); }
+
+  /* ── STATS ── */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: #fff; border: 1px solid var(--gray-200); border-radius: 10px; padding: 16px; text-align: center; }
+  .stat-card .num { font-size: 1.8rem; font-weight: 800; color: var(--primary); }
+  .stat-card .lbl { font-size: 0.75rem; color: var(--gray-500); font-weight: 600; text-transform: uppercase; margin-top: 2px; }
+
+  /* ── FOOTER ── */
+  footer { text-align: center; padding: 24px; color: var(--gray-400); font-size: 0.8rem; }
+
+  /* ── DIVIDER ── */
+  .section-title { font-size: 0.85rem; font-weight: 700; color: var(--gray-700); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--gray-200); }
+
+  /* ── EMPTY STATE ── */
+  .empty { text-align: center; padding: 40px 20px; color: var(--gray-400); }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 8px; }
+  .empty p { font-size: 0.9rem; }
+
+  /* ── HERO (public) ── */
+  .hero { text-align: center; margin-bottom: 32px; }
+  .hero h1 { font-size: 2rem; font-weight: 800; color: var(--gray-900); letter-spacing: -0.5px; }
+  .hero p { color: var(--gray-500); margin-top: 6px; font-size: 1rem; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: 1fr 1fr; }
+    .hero h1 { font-size: 1.5rem; }
+    .card { padding: 20px; }
+    .container { padding: 24px 16px; }
+    .search-wrap { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     VIEW: PUBLIC (default)
+═══════════════════════════════════════ -->
+<div id="view-public" class="view active">
+  <nav>
+    <div class="nav-brand">🎓 Computer Technology Institute Certificate <span>System</span></div>
+    <div class="nav-actions">
+      <button class="nav-link" onclick="showView('view-login')">Admin Login</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="hero">
+      <div style="font-size:2.5rem;margin-bottom:10px;">🔍</div>
+      <h1>Certificate Verification</h1>
+      <p>Enter your Student ID, CNIC, or Phone number to verify and download your certificate.</p>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Search Your Certificate</div>
+      <div class="search-wrap">
+        <input type="text" id="search-input" placeholder="Enter Student ID, CNIC, or Phone Number" onkeydown="if(event.key==='Enter')searchStudent()">
+        <button class="btn btn-primary" onclick="searchStudent()">🔍 Search</button>
+      </div>
+      <div id="search-result"></div>
+    </div>
+
+    <footer>Certificate Verification System &copy; 2024 &mdash; For support, contact your institution.</footer>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: LOGIN
+═══════════════════════════════════════ -->
+<div id="view-login" class="view">
+  <div class="container" style="max-width:420px;">
+    <div style="margin-top:60px;"></div>
+    <div class="page-header">
+      <div class="icon">🔐</div>
+      <h1>Admin Login</h1>
+      <p>Sign in to manage student certificates</p>
+    </div>
+    <div class="card">
+      <div id="login-error" class="alert alert-danger" style="display:none;"></div>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="login-user" placeholder="admin" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="doLogin()">Sign In</button>
+      <div style="margin-top:14px;text-align:center;">
+        <button class="nav-link" onclick="showView('view-public')">← Back to Verification</button>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:12px;color:var(--gray-400);font-size:0.78rem;">
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: ADMIN DASHBOARD
+═══════════════════════════════════════ -->
+<div id="view-admin" class="view">
+  <nav>
+    <div class="nav-brand">🎓 Computer Technology Institute <span>Admin Portal</span></div>
+    <div class="nav-actions">
+      <button class="nav-link" onclick="showView('view-public')">View Public Site</button>
+      <button class="nav-link danger" onclick="doLogout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="container wide">
+    <div style="margin-top:8px;"></div>
+
+    <!-- STATS -->
+    <div class="stats" id="admin-stats"></div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" id="tab-add" onclick="switchTab('add')">➕ Add Student</button>
+      <button class="tab" id="tab-list" onclick="switchTab('list')">📋 All Records</button>
+      <button class="tab" id="tab-creds" onclick="switchTab('creds')">🔑 Account Settings</button>
+    </div>
+
+    <!-- TAB: ADD -->
+    <div id="panel-add">
+      <div class="card">
+        <div class="section-title">Add Student Certificate Record</div>
+        <div id="add-alert" style="display:none;"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Student Name *</label>
+            <input type="text" id="f-name" placeholder="Full name">
+          </div>
+          <div class="form-group">
+            <label>Father Name *</label>
+            <input type="text" id="f-father" placeholder="Father's full name">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date of Birth *</label>
+            <input type="date" id="f-dob">
+          </div>
+          <div class="form-group">
+            <label>Student ID * (used for search)</label>
+            <input type="text" id="f-sid" placeholder="e.g. STU-2024-001">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>CNIC / Phone Number *</label>
+            <input type="text" id="f-cnic" placeholder="e.g. 42101-1234567-1 or 03001234567">
+          </div>
+          <div class="form-group">
+            <label>Course Name *</label>
+            <input type="text" id="f-course" placeholder="e.g. Web Development">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Completion Date *</label>
+            <input type="date" id="f-completion">
+          </div>
+          <div class="form-group">
+            <label>Certificate PDF *</label>
+            <input type="file" id="f-pdf" accept=".pdf">
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="addStudent()">💾 Save Record</button>
+          <button class="btn btn-outline" onclick="clearForm()">✕ Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: CREDS -->
+    <div id="panel-creds" style="display:none;">
+      <div class="card" style="max-width:520px;">
+        <div class="section-title">🔑 Change Admin Username & Password</div>
+        <p style="color:var(--gray-500);font-size:0.875rem;margin-bottom:20px;">
+          Only the logged-in admin can update these credentials. Changes take effect immediately and persist across sessions.
+        </p>
+        <div id="creds-alert" style="display:none;"></div>
+
+        <!-- Current credentials confirmation -->
+        <div style="background:var(--gray-50);border:1.5px solid var(--gray-200);border-radius:10px;padding:16px;margin-bottom:22px;">
+          <div style="font-size:0.75rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:10px;">Current Login Info</div>
+          <div style="display:flex;gap:24px;flex-wrap:wrap;">
+            <div><span style="font-size:0.78rem;color:var(--gray-400);">USERNAME</span><div id="current-username-display" style="font-weight:700;color:var(--gray-900);margin-top:2px;"></div></div>
+            <div><span style="font-size:0.78rem;color:var(--gray-400);">PASSWORD</span><div style="font-weight:700;color:var(--gray-900);margin-top:2px;">••••••••</div></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Current Password <span style="color:var(--danger);">*</span></label>
+          <input type="password" id="c-current-pass" placeholder="Enter your current password to confirm">
+        </div>
+
+        <div style="height:1px;background:var(--gray-200);margin:20px 0;"></div>
+        <div style="font-size:0.8rem;font-weight:700;color:var(--gray-700);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.3px;">New Credentials</div>
+
+        <div class="form-group">
+          <label>New Username</label>
+          <input type="text" id="c-new-user" placeholder="Leave blank to keep current username">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>New Password</label>
+            <input type="password" id="c-new-pass" placeholder="Leave blank to keep current">
+          </div>
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <input type="password" id="c-confirm-pass" placeholder="Re-enter new password">
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="changeCredentials()">💾 Save Changes</button>
+          <button class="btn btn-outline" onclick="clearCredsForm()">✕ Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: LIST -->
+    <div id="panel-list" style="display:none;">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+          <div class="section-title" style="margin:0;border:none;padding:0;">All Student Records</div>
+          <input type="text" id="filter-input" placeholder="Filter by name or ID…" style="max-width:220px;" oninput="renderTable()">
+        </div>
+        <div id="records-table"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════
+// DATA STORE
+// ════════════════════════════════
+const _defaultAdmin = { user: 'admin', pass: 'admin123' };
+const ADMIN = JSON.parse(localStorage.getItem('cvs_admin') || JSON.stringify(_defaultAdmin));
+let students = JSON.parse(localStorage.getItem('cvs_students') || '[]');
+
+function save() {
+  localStorage.setItem('cvs_students', JSON.stringify(students));
+}
+function saveAdmin() {
+  localStorage.setItem('cvs_admin', JSON.stringify(ADMIN));
+}
+
+// ════════════════════════════════
+// VIEW MANAGEMENT
+// ════════════════════════════════
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ════════════════════════════════
+// AUTH
+// ════════════════════════════════
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value.trim();
+  const err = document.getElementById('login-error');
+  if (u === ADMIN.user && p === ADMIN.pass) {
+    err.style.display = 'none';
+    sessionStorage.setItem('cvs_auth', '1');
+    showView('view-admin');
+    renderStats(); renderTable();
+  } else {
+    err.textContent = 'Invalid username or password.';
+    err.style.display = 'block';
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('cvs_auth');
+  showView('view-public');
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+// ════════════════════════════════
+// PUBLIC SEARCH
+// ════════════════════════════════
+function searchStudent() {
+  const q = document.getElementById('search-input').value.trim().toLowerCase();
+  const box = document.getElementById('search-result');
+  if (!q) { box.innerHTML = ''; return; }
+
+  const found = students.find(s =>
+    s.sid.toLowerCase() === q ||
+    s.cnic.toLowerCase().replace(/[-\s]/g,'') === q.replace(/[-\s]/g,'') ||
+    s.cnic.toLowerCase() === q
+  );
+
+  if (!found) {
+    box.innerHTML = `
+      <div class="result-card not-found">
+        <div style="font-size:2rem;margin-bottom:8px;">❌</div>
+        <p>No Record Found</p>
+        <small>Please check the ID/CNIC/Phone and try again, or contact your institution.</small>
+      </div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="result-card found">
+      <div class="result-header">
+        <div>
+          <div class="result-name">${esc(found.name)}</div>
+          <div class="result-id">Student ID: ${esc(found.sid)}</div>
+        </div>
+        <span class="badge">✓ Verified</span>
+      </div>
+      <div class="detail-grid">
+        <div class="detail-item"><label>Father Name</label><p>${esc(found.father)}</p></div>
+        <div class="detail-item"><label>Date of Birth</label><p>${formatDate(found.dob)}</p></div>
+        <div class="detail-item"><label>CNIC / Phone</label><p>${esc(found.cnic)}</p></div>
+        <div class="detail-item"><label>Course</label><p>${esc(found.course)}</p></div>
+        <div class="detail-item"><label>Completion Date</label><p>${formatDate(found.completion)}</p></div>
+      </div>
+      ${found.pdf
+        ? `<button class="btn btn-success" onclick="downloadCert('${found.sid}')">⬇ Download Certificate (PDF)</button>`
+        : `<p style="color:var(--gray-400);font-size:0.85rem;">⚠ Certificate PDF not uploaded yet.</p>`}
+    </div>`;
+}
+
+function downloadCert(sid) {
+  const s = students.find(x => x.sid === sid);
+  if (!s || !s.pdf) return;
+  const a = document.createElement('a');
+  a.href = s.pdf;
+  a.download = `Certificate_${s.sid}.pdf`;
+  a.click();
+}
+
+// ════════════════════════════════
+// ADMIN: ADD STUDENT
+// ════════════════════════════════
+function addStudent() {
+  const name       = document.getElementById('f-name').value.trim();
+  const father     = document.getElementById('f-father').value.trim();
+  const dob        = document.getElementById('f-dob').value;
+  const sid        = document.getElementById('f-sid').value.trim();
+  const cnic       = document.getElementById('f-cnic').value.trim();
+  const course     = document.getElementById('f-course').value.trim();
+  const completion = document.getElementById('f-completion').value;
+  const fileInput  = document.getElementById('f-pdf');
+
+  if (!name || !father || !dob || !sid || !cnic || !course || !completion) {
+    showAddAlert('Please fill in all required fields.', 'danger'); return;
+  }
+  if (students.find(s => s.sid.toLowerCase() === sid.toLowerCase())) {
+    showAddAlert('A record with this Student ID already exists.', 'danger'); return;
+  }
+
+  const processRecord = (pdfData) => {
+    students.push({ name, father, dob, sid, cnic, course, completion, pdf: pdfData || null, addedAt: new Date().toISOString() });
+    save();
+    showAddAlert('Record saved successfully!', 'success');
+    clearForm();
+    renderStats(); renderTable();
+  };
+
+  if (fileInput.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => processRecord(e.target.result);
+    reader.readAsDataURL(fileInput.files[0]);
+  } else {
+    processRecord(null);
+  }
+}
+
+function showAddAlert(msg, type) {
+  const el = document.getElementById('add-alert');
+  el.className = `alert alert-${type}`;
+  el.textContent = msg;
+  el.style.display = 'block';
+  if (type === 'success') setTimeout(() => el.style.display = 'none', 3000);
+}
+
+function clearForm() {
+  ['f-name','f-father','f-dob','f-sid','f-cnic','f-course','f-completion'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f-pdf').value = '';
+  document.getElementById('add-alert').style.display = 'none';
+}
+
+// ════════════════════════════════
+// ADMIN: STATS & TABLE
+// ════════════════════════════════
+function renderStats() {
+  const withPdf = students.filter(s => s.pdf).length;
+  document.getElementById('admin-stats').innerHTML = `
+    <div class="stat-card"><div class="num">${students.length}</div><div class="lbl">Total Records</div></div>
+    <div class="stat-card"><div class="num">${withPdf}</div><div class="lbl">With Certificate</div></div>
+    <div class="stat-card"><div class="num">${students.length - withPdf}</div><div class="lbl">PDF Pending</div></div>`;
+}
+
+function renderTable() {
+  const q = (document.getElementById('filter-input')?.value || '').toLowerCase();
+  const filtered = students.filter(s =>
+    s.name.toLowerCase().includes(q) ||
+    s.sid.toLowerCase().includes(q) ||
+    s.course.toLowerCase().includes(q)
+  );
+
+  const box = document.getElementById('records-table');
+  if (!filtered.length) {
+    box.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><p>${students.length ? 'No matching records.' : 'No records added yet.'}</p></div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Student ID</th><th>Name</th><th>Course</th><th>Completion</th><th>Certificate</th><th>Action</th>
+        </tr></thead>
+        <tbody>
+          ${filtered.map(s => `
+            <tr>
+              <td><b>${esc(s.sid)}</b></td>
+              <td>${esc(s.name)}</td>
+              <td>${esc(s.course)}</td>
+              <td>${formatDate(s.completion)}</td>
+              <td>${s.pdf ? '<span style="color:var(--success);font-weight:600;">✓ PDF</span>' : '<span style="color:var(--gray-400);">— None</span>'}</td>
+              <td>
+                ${s.pdf ? `<button class="btn btn-outline btn-sm" onclick="downloadCert('${s.sid}')">⬇ PDF</button>` : ''}
+                <button class="btn btn-danger btn-sm" onclick="deleteRecord('${s.sid}')">🗑</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function deleteRecord(sid) {
+  if (!confirm('Delete this record? This cannot be undone.')) return;
+  students = students.filter(s => s.sid !== sid);
+  save();
+  renderStats(); renderTable();
+}
+
+// ════════════════════════════════
+// ADMIN: CHANGE CREDENTIALS
+// ════════════════════════════════
+function changeCredentials() {
+  const currentPass  = document.getElementById('c-current-pass').value;
+  const newUser      = document.getElementById('c-new-user').value.trim();
+  const newPass      = document.getElementById('c-new-pass').value;
+  const confirmPass  = document.getElementById('c-confirm-pass').value;
+
+  // Verify current password
+  if (currentPass !== ADMIN.pass) {
+    showCredsAlert('Incorrect current password. Please try again.', 'danger'); return;
+  }
+
+  // Must change at least something
+  if (!newUser && !newPass) {
+    showCredsAlert('Please enter a new username or new password to update.', 'danger'); return;
+  }
+
+  // Validate new username
+  if (newUser && newUser.length < 3) {
+    showCredsAlert('Username must be at least 3 characters long.', 'danger'); return;
+  }
+
+  // Validate new password
+  if (newPass) {
+    if (newPass.length < 6) {
+      showCredsAlert('New password must be at least 6 characters long.', 'danger'); return;
+    }
+    if (newPass !== confirmPass) {
+      showCredsAlert('New password and confirm password do not match.', 'danger'); return;
+    }
+  }
+
+  // Apply changes
+  if (newUser) ADMIN.user = newUser;
+  if (newPass) ADMIN.pass = newPass;
+  saveAdmin();
+
+  document.getElementById('current-username-display').textContent = ADMIN.user;
+  clearCredsForm();
+  showCredsAlert('✓ Credentials updated successfully! Use your new login details next time.', 'success');
+}
+
+function showCredsAlert(msg, type) {
+  const el = document.getElementById('creds-alert');
+  el.className = `alert alert-${type}`;
+  el.textContent = msg;
+  el.style.display = 'block';
+  if (type === 'success') setTimeout(() => el.style.display = 'none', 4000);
+}
+
+function clearCredsForm() {
+  ['c-current-pass','c-new-user','c-new-pass','c-confirm-pass'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  const el = document.getElementById('creds-alert');
+  if (el) el.style.display = 'none';
+}
+
+// ════════════════════════════════
+// TABS
+// ════════════════════════════════
+function switchTab(t) {
+  document.getElementById('panel-add').style.display   = t === 'add'   ? '' : 'none';
+  document.getElementById('panel-list').style.display  = t === 'list'  ? '' : 'none';
+  document.getElementById('panel-creds').style.display = t === 'creds' ? '' : 'none';
+  document.getElementById('tab-add').classList.toggle('active',   t === 'add');
+  document.getElementById('tab-list').classList.toggle('active',  t === 'list');
+  document.getElementById('tab-creds').classList.toggle('active', t === 'creds');
+  if (t === 'list') renderTable();
+  if (t === 'creds') {
+    document.getElementById('current-username-display').textContent = ADMIN.user;
+    clearCredsForm();
+  }
+}
+
+// ════════════════════════════════
+// HELPERS
+// ════════════════════════════════
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function formatDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${day} ${months[+m-1]} ${y}`;
+}
+
+// Restore session
+if (sessionStorage.getItem('cvs_auth')) {
+  showView('view-admin');
+  renderStats(); renderTable();
+}
+</script>
+</body>
+</html>
