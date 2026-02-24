@@ -1,1 +1,0 @@
-# ComputerTechnologyInstitute.github.io
